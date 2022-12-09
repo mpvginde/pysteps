@@ -857,7 +857,7 @@ def _convert_proj4_to_grid_mapping(proj4str):
         v2 = d["lat_2"] if "lat_2" in d else float(0)
         params["standard_parallel"] = (float(v1), float(v2))
     else:
-        print("unknown projection", d["proj"])
+        print("unknown projection", d["proj"],flush=True)
         return None, None, None
 
     return grid_mapping_var_name, grid_mapping_name, params

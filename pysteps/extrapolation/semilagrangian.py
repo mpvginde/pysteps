@@ -127,6 +127,7 @@ def extrapolate(
 
     # defaults
     verbose = kwargs.get("verbose", False)
+    rank = kwargs.get("rank",0)
     displacement_prev = kwargs.get("displacement_prev", None)
     n_iter = kwargs.get("n_iter", 1)
     return_displacement = kwargs.get("return_displacement", False)
@@ -164,8 +165,8 @@ def extrapolate(
 
     timestep_diff = np.hstack([[timesteps[0]], np.diff(timesteps)])
 
-    if verbose:
-        print("Computing the advection with the semi-lagrangian scheme.")
+    if verbose and rank == 0:
+        print(f"rank {rank}: Computing the advection with the semi-lagrangian scheme.",flush=True)
         t0 = time.time()
 
     if precip is not None and outval == "min":
@@ -254,8 +255,8 @@ def extrapolate(
 
             precip_extrap.append(np.reshape(precip_warped, precip.shape))
 
-    if verbose:
-        print("--- %s seconds ---" % (time.time() - t0))
+    if verbose and rank == 0:
+        print("--- %s seconds ---" % (time.time() - t0),flush=True)
 
     if precip is not None:
         if not return_displacement:
