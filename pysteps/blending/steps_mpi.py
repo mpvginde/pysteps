@@ -933,11 +933,37 @@ def forecast(
                     )
             else:
                 EPS = None
+
+            # 8.3.2 regress the extrapolation component to the subsequent time
+            # step
+            # iterate the AR(p) model for each cascade level
+            for i in range(n_cascade_levels):
+                # apply AR(p) process to extrapolation cascade level
+                if EPS is not None or vel_pert_method is not None:
+                    precip_cascade[j][i] = autoregression.iterate_ar_model(
+                        precip_cascade[j][i], PHI[i, :]
+                    )
+
+                else:
+                    # use the deterministic AR(p) model computed above if
+                    # perturbations are disabled
+                    precip_cascade[j][i] = R_m[i]
+
+            # 8.3.3 regress the noise component to the subsequent time step
+            # iterate the AR(p) model for each cascade level
+            for i in range(n_cascade_levels):
+                # normalize the noise cascade
+                if EPS is not None:
+                    EPS_ = EPS["cascade_levels"][i]
+                    EPS_ *= noise_std_coeffs[i]
+                else:
+                    EPS_ = None
                 # apply AR(p) process to noise cascade level
                 # (Returns zero noise if EPS is None)
                 noise_cascade[j][i] = autoregression.iterate_ar_model(
                     noise_cascade[j][i], PHI[i, :], eps=EPS_
                     )
+            
             EPS = None
             EPS_ = None
 
@@ -980,7 +1006,6 @@ def forecast(
 
                     R_f_ip = np.stack(R_f_ip)
                     Yn_ip = np.stack(Yn_ip)
-
                     t_diff_prev = t_sub - t_prev[j]
                     t_total[j] += t_diff_prev
 
@@ -1049,6 +1074,7 @@ def forecast(
                             **extrap_kwargs_noise,
                             )
                         Yn_ep[i] = Yn_ep_[0]
+
 
                     # Append the results to the output lists
                     R_f_ep_out.append(R_f_ep)
@@ -1222,7 +1248,6 @@ def forecast(
                     R_f_blended = blending.utils.blend_cascades(
                         cascades_norm=cascades_stacked, weights=weights
                         )
-
                     # Also blend the cascade without the extrapolation component
                     R_f_blended_mod_only = blending.utils.blend_cascades(
                         cascades_norm=cascades_stacked[1:, :],
