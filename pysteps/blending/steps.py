@@ -953,7 +953,7 @@ def forecast(
                         precip_cascade[j][i] = autoregression.iterate_ar_model(
                             precip_cascade[j][i], PHI[i, :]
                         )
-
+                        precip_cascade[j][i][1] /= np.std(precip_cascade[j][i][1])
                     else:
                         # use the deterministic AR(p) model computed above if
                         # perturbations are disabled
@@ -2205,8 +2205,8 @@ def _compute_initial_nwp_skill(
     """Calculate the initial skill of the (NWP) model forecasts at t=0."""
     rho_nwp_models = [
         blending.skill_scores.spatial_correlation(
-            obs=R_c[0, :, -1, :, :],
-            mod=precip_models[n_model, :, :, :],
+            obs=R_c[0, :, -1, :, :].copy(),
+            mod=precip_models[n_model, :, :, :].copy(),
             domain_mask=domain_mask,
         )
         for n_model in range(precip_models.shape[0])
