@@ -16,7 +16,7 @@ The Spatial-Amplitude-Location (SAL) score by :cite:`WPHF2008`.
 from math import sqrt, hypot
 
 import numpy as np
-from scipy.ndimage.measurements import center_of_mass
+from scipy.ndimage import center_of_mass
 
 from pysteps.exceptions import MissingOptionalDependency
 from pysteps.feature import tstorm as tstorm_detect
@@ -159,7 +159,7 @@ def sal_structure(
     observation_volume = _sal_scaled_volume(observation_objects).sum()
     nom = prediction_volume - observation_volume
     denom = prediction_volume + observation_volume
-    return nom / (0.5 * denom)
+    return np.divide(nom, (0.5 * denom))
 
 
 def sal_amplitude(prediction, observation):
@@ -300,12 +300,9 @@ def _sal_l2_param(prediction, observation, thr_factor, thr_quantile, tstorm_kwar
     maximum_distance = sqrt(
         ((observation.shape[0]) ** 2) + ((observation.shape[1]) ** 2)
     )
-    obs_r = (
-        _sal_weighted_distance(observation, thr_factor, thr_quantile, tstorm_kwargs)
-    ) * (np.nanmean(observation))
-    forc_r = (
-        _sal_weighted_distance(prediction, thr_factor, thr_quantile, tstorm_kwargs)
-    ) * (np.nanmean(prediction))
+    obs_r = _sal_weighted_distance(observation, thr_factor, thr_quantile, tstorm_kwargs)
+    forc_r = _sal_weighted_distance(prediction, thr_factor, thr_quantile, tstorm_kwargs)
+
     location_2 = 2 * ((abs(obs_r - forc_r)) / maximum_distance)
     return float(location_2)
 

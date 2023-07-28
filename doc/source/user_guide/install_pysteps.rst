@@ -8,7 +8,7 @@ Dependencies
 
 The pysteps package needs the following dependencies
 
-* `python >=3.7, <3.10 <http://www.python.org/>`_ (lower or higher versions may work but are not tested).
+* `python >=3.8, <3.11 <http://www.python.org/>`_ (lower or higher versions may work but are not tested).
 * `jsonschema <https://pypi.org/project/jsonschema/>`_
 * `matplotlib <http://matplotlib.org/>`_
 * `netCDF4 <https://pypi.org/project/netCDF4/>`_
@@ -37,7 +37,7 @@ Other optional dependencies include:
 * `pywavelets <https://pywavelets.readthedocs.io/en/latest/>`_
   (for intensity-scale verification)
 * `pandas <https://pandas.pydata.org/>`_ and
-  `scikit-image <https://scikit-image.org/>`_ (for advanced feature detection methods)
+  `scikit-image >=0.19 <https://scikit-image.org/>`_ (for advanced feature detection methods)
 * `rasterio <https://rasterio.readthedocs.io/en/latest/>`_ (for the reprojection module)
 
 

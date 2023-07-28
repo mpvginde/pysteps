@@ -164,7 +164,6 @@ def get_method(name, type="deterministic"):
     type = type.lower()
 
     if type == "deterministic":
-
         from .detcatscores import det_cat_fct
         from .detcontscores import det_cont_fct
         from .spatialscores import binary_mse, fss
@@ -173,6 +172,7 @@ def get_method(name, type="deterministic"):
         # categorical
         if name in [
             "acc",
+            "bias",
             "csi",
             "f1",
             "fa",
@@ -224,7 +224,6 @@ def get_method(name, type="deterministic"):
             raise ValueError("unknown deterministic method %s" % name)
 
     elif type == "ensemble":
-
         from .ensscores import ensemble_skill, ensemble_spread, rankhist
 
         if name == "ens_skill":
@@ -237,7 +236,6 @@ def get_method(name, type="deterministic"):
             raise ValueError("unknown ensemble method %s" % name)
 
     elif type == "probabilistic":
-
         from .probscores import CRPS, reldiag, ROC_curve
 
         if name == "crps":
