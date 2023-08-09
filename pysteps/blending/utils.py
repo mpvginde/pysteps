@@ -521,7 +521,7 @@ def load_NWP(input_nc_path_decomp, input_path_velocities, start_time, n_timestep
     return R_d, uv
 
 
-def check_norain(precip_arr, precip_thr, norain_thr=0.0):
+def check_norain(precip_arr, precip_thr=None, norain_thr=0.0):
     """
 
     Parameters
