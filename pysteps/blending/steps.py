@@ -656,7 +656,7 @@ def forecast(
         # rainfall data
         if zero_precip_radar:
             precip_noise_input = _determine_max_nr_rainy_cells_nwp(
-                precip_models_pm, precip_thr, n_ens_members, timesteps
+                precip_models_pm, precip_thr, precip_models_pm.shape[0], timesteps
             )
             # Make sure precip_noise_input is three dimensional
             precip_noise_input = precip_noise_input[np.newaxis, :, :]
@@ -2398,15 +2398,16 @@ def _fill_nans_infs_nwp_cascade(
 
 
 def _determine_max_nr_rainy_cells_nwp(
-    precip_models_pm, precip_thr, n_ens_members, timesteps
+    precip_models_pm, precip_thr, n_models, timesteps
 ):
     """Initialize noise based on the NWP field time step where the fraction of rainy cells is highest"""
     if precip_thr is None:
         precip_thr = np.nanmin(precip_models_pm)
+
     max_rain_pixels = -1
     max_rain_pixels_j = -1
     max_rain_pixels_t = -1
-    for j in range(n_ens_members):
+    for j in range(n_models):
         for t in range(timesteps):
             rain_pixels = precip_models_pm[j][t][
                 precip_models_pm[j][t] > precip_thr
