@@ -55,7 +55,7 @@ from pysteps import noise
 from pysteps import utils
 from pysteps.nowcasts import utils as nowcast_utils
 from pysteps.postprocessing import probmatching
-from pyqsteps.timeseries import autoregression, correlation
+from pysteps.timeseries import autoregression, correlation
 from pysteps import blending
 
 from pysteps.blending.steps import _transform_to_lagrangian
@@ -519,8 +519,8 @@ def forecast(
 
     # - we need all the nwp models on the root rank for the no rain cases
     precip_models, velocity_models = _send_receive_nwp(
-        precip_models, velocity_models, timestep=-1, comm=comm, root=root)
-
+        precip_models, velocity_models, timestep=-1, comm=comm,timesteps=timesteps,root=root)
+    
     # - only needed for root rank
     if rank == root:
         # 1.1 prepare for move to Lagrangian space
@@ -594,8 +594,8 @@ def forecast(
     # All ranks    
     precip = broadcast(precip,comm)
     zerovalue = broadcast(zerovalue,comm)
-    zero_precip_radar = broadcast(zero_precip_radar)
-    zero_model_fields = broadcast(zero_model_fields)
+    zero_precip_radar = broadcast(zero_precip_radar,comm)
+    zero_model_fields = broadcast(zero_model_fields,comm)
     
     #  calculate the number of members on the local rank
     n_local_ens_members = len(np.array_split(np.ones(n_ens_members),nproc)[rank])
@@ -731,6 +731,7 @@ def forecast(
             noise_std_coeffs =  None
             PHI = None
             randgen_prec = None
+            MASK_thr = None
         
 
         # 6.1 Broadcast and scatter the variables 
@@ -744,7 +745,7 @@ def forecast(
         generate_noise = broadcast(generate_noise,comm)
         noise_std_coeffs = broadcast(noise_std_coeffs,comm)
         PHI = broadcast(PHI,comm)
-
+        MASK_thr = broadcast(MASK_thr,comm)
         # - scatter
         randgen_prec = scatter(randgen_prec,n_ens_members,comm)
 
@@ -1745,26 +1746,74 @@ def scatter(data,n_ens_members,comm,root=0,tag=11):
 
     return(data)
 
-def _send_receive_nwp(r_nwp,v_nwp,timestep,comm,root=0):
+def _send_receive_nwp(r_nwp,v_nwp,timestep,comm,timesteps=None,root=0):
+    if timestep < 0 and timesteps == None:
+        raise ValueError(
+                "If timestep < 0, timesteps cannot be None"
+                )
     rank = comm.Get_rank()
-    if len(r_nwp) != 0:
-        if timestep < 0:
-            r_nwp_t = np.stack(r_nwp)
-            v_nwp_t = np.stack(v_nwp)
-        else:
-            r_nwp_t = np.stack(r_nwp)[:,timestep]
-            v_nwp_t = np.stack(v_nwp)[:,timestep,:,:,:]
+    has_nwp = (len(r_nwp) != 0)
+    if has_nwp:
+            r_nwp = np.stack(r_nwp)
+            v_nwp = np.stack(v_nwp)
     else:
         r_nwp_t = None
         v_nwp_t = None
-    r_nwp_t = comm.gather(r_nwp_t,root=root)
-    v_nwp_t = comm.gather(v_nwp_t,root=root)
-    if rank ==  root:
-        r_nwp_t = [item for item in r_nwp_t if item is not None]
-        v_nwp_t = [item for item in v_nwp_t if item is not None]
-        return((r_nwp_t,v_nwp_t))
+    if timestep > 0:
+        if has_nwp:
+            r_nwp_t = r_nwp[:,timestep]
+            v_nwp_t = v_nwp[:,timestep,:,:,:]
+        r_nwp_t = comm.gather(r_nwp_t,root=root)
+        v_nwp_t = comm.gather(v_nwp_t,root=root)
+        if rank ==  root:
+            r_nwp_t = [item for item in r_nwp_t if item is not None]
+            v_nwp_t = [item for item in v_nwp_t if item is not None]
+            return((r_nwp_t,v_nwp_t))
+        else:
+            return((None,None))
     else:
-        return((None,None))
+        if rank == root:
+            r_out_ = []
+            v_out_ = []
+        for t in range(timesteps+1):
+            if has_nwp:
+                r_nwp_t = r_nwp[:,timestep]
+                v_nwp_t = v_nwp[:,timestep,:,:,:]
+            else:
+                r_nwp_t = None
+                v_nwp_t = None
+            r_nwp_t = comm.gather(r_nwp_t,root=root)
+            v_nwp_t = comm.gather(v_nwp_t,root=root)
+            if rank == root:
+                r_nwp_t = [item for item in r_nwp_t if item is not None]
+                v_nwp_t = [item for item in v_nwp_t if item is not None]
+                r_out_.append(r_nwp_t.copy())
+                v_out_.append(v_nwp_t.copy())
+        if rank == root:
+            r_out = []
+            v_out = []
+            for n in range(len(r_out_[0])):
+                r_temp = []
+                v_temp = []
+                for t in range(len(r_out_)):
+                    r_temp.append(r_out_[t][n])
+                    v_temp.append(v_out_[t][n])
+                v_temp = np.stack(v_temp)
+                r_out.append(r_temp)
+                v_out.append(v_temp)
+            r_out=np.stack(r_out)
+            v_out=np.stack(v_out)
+            return((r_out.squeeze(),v_out.squeeze()))
+        else:
+            return((None,None))
+
+
+
+
+
+
+
+
 
 
 
