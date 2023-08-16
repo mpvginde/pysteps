@@ -561,7 +561,7 @@ def forecast(
 
     # 2.3.1 If precip is below the norain threshold and precip_models_pm is zero,
     # we consider it as no rain in the domain.
-    # The forecast will directly return an array filled with the miminmum
+    # The forecast will directly return an array filled with the minimum
     # value present in precip (which equals zero rainfall in the used
     # transformation)
     if zero_precip_radar and zero_model_fields:
@@ -583,20 +583,22 @@ def forecast(
         # Save per time step to ensure the array does not become too large if
         # no return_output is requested and callback is not None.
         for t, subtimestep_idx in enumerate(timesteps):
-            # Create an empty np array with shape [n_ens_members, rows, cols]
-            # and fill it with the minimum value from precip (corresponding to
-            # zero precipitation)
-            R_f_ = np.full(
-                (n_ens_members, precip_shape[0], precip_shape[1]), np.nanmin(precip)
-            )
-            if callback is not None:
-                if R_f_.shape[1] > 0:
-                    callback(R_f_.squeeze())
-            if return_output:
-                for j in range(n_ens_members):
-                    R_f[j].append(R_f_[j])
+            # If the timestep is not the first one, we need to provide the zero forecast
+            if t > 0:
+                # Create an empty np array with shape [n_ens_members, rows, cols]
+                # and fill it with the minimum value from precip (corresponding to
+                # zero precipitation)
+                R_f_ = np.full(
+                    (n_ens_members, precip_shape[0], precip_shape[1]), np.nanmin(precip)
+                )
+                if callback is not None:
+                    if R_f_.shape[1] > 0:
+                        callback(R_f_.squeeze())
+                if return_output:
+                    for j in range(n_ens_members):
+                        R_f[j].append(R_f_[j])
 
-            R_f_ = None
+                R_f_ = None
 
         if measure_time:
             zero_precip_time = time.time() - starttime_init
@@ -656,7 +658,7 @@ def forecast(
         # rainfall data
         if zero_precip_radar:
             precip_noise_input = _determine_max_nr_rainy_cells_nwp(
-                precip_models_pm, precip_thr, n_ens_members, timesteps
+                precip_models_pm, precip_thr, precip_models_pm.shape[0], timesteps
             )
             # Make sure precip_noise_input is three dimensional
             precip_noise_input = precip_noise_input[np.newaxis, :, :]
@@ -2398,15 +2400,16 @@ def _fill_nans_infs_nwp_cascade(
 
 
 def _determine_max_nr_rainy_cells_nwp(
-    precip_models_pm, precip_thr, n_ens_members, timesteps
+    precip_models_pm, precip_thr, n_models, timesteps
 ):
     """Initialize noise based on the NWP field time step where the fraction of rainy cells is highest"""
     if precip_thr is None:
         precip_thr = np.nanmin(precip_models_pm)
+
     max_rain_pixels = -1
     max_rain_pixels_j = -1
     max_rain_pixels_t = -1
-    for j in range(n_ens_members):
+    for j in range(n_models):
         for t in range(timesteps):
             rain_pixels = precip_models_pm[j][t][
                 precip_models_pm[j][t] > precip_thr
