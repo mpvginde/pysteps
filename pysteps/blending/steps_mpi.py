@@ -578,7 +578,6 @@ def forecast(
         ) = _compute_cascade_decomposition_nwp(
             precip_models, bp_filter, decompositor, recompositor, fft, domain
         )
-        
         # 2.3 Check for zero input fields in the radar and NWP data.
         zero_precip_radar = blending.utils.check_norain(precip, precip_thr, norain_thr)
         # The norain fraction threshold used for nwp is the default value of 0.0,
@@ -674,7 +673,7 @@ def forecast(
             # rainfall data
             if zero_precip_radar:
                 precip_noise_input = _determine_max_nr_rainy_cells_nwp(
-                    precip_models_pm, precip_thr, n_ens_members, timesteps
+                    precip_models_pm, precip_thr, precip_models_pm.shape[0], timesteps
                 )
                 # Make sure precip_noise_input is three dimensional
                 precip_noise_input = precip_noise_input[np.newaxis, :, :]
@@ -1801,9 +1800,9 @@ def _send_receive_nwp(r_nwp,v_nwp,timestep,comm,timesteps=None,root=0):
                 v_temp = np.stack(v_temp)
                 r_out.append(r_temp)
                 v_out.append(v_temp)
-            r_out=np.stack(r_out)
-            v_out=np.stack(v_out)
-            return((r_out.squeeze(),v_out.squeeze()))
+            r_out=np.stack(r_out)[:,:,0]
+            v_out=np.stack(v_out)[:,:,0,:,:,:]
+            return((r_out,v_out))
         else:
             return((None,None))
 
