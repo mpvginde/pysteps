@@ -1181,6 +1181,16 @@ def forecast(
                             combined_mean=mu_extrapolation,
                             combined_sigma=sigma_extrapolation,
                         )
+                        # Make sure we have values outside the mask
+                        if zero_precip_radar:
+                            R_f_ip_recomp = np.nan_to_num(
+                                R_f_ip_recomp,
+                                copy=True,
+                                nan=zerovalue,
+                                posinf=zerovalue,
+                                neginf=zerovalue,
+                            )
+
                         # Put back the mask
                         R_f_ip_recomp[domain_mask] = np.NaN
                         extrap_kwargs["displacement_prev"] = D[j]
@@ -1205,9 +1215,17 @@ def forecast(
                             compute_stats=True,
                             compact_output=True,
                         )["cascade_levels"]
+                        # Make sure we have values outside the mask
+                        if zero_precip_radar:
+                            R_f_ep = np.nan_to_num(
+                                R_f_ep,
+                                copy=True,
+                                nan=np.nanmin(R_f_ip),
+                                posinf=np.nanmin(R_f_ip),
+                                neginf=np.nanmin(R_f_ip),
+                            )
                         for i in range(n_cascade_levels):
                             R_f_ep[i][temp_mask] = np.NaN
-                        
                         # B. Noise
                         Yn_ip_recomp = blending.utils.recompose_cascade(
                             combined_cascade=Yn_ip,
@@ -1236,17 +1254,21 @@ def forecast(
                         )["cascade_levels"]
                         for i in range(n_cascade_levels):
                             Yn_ep[i] *= noise_std_coeffs[i]
-                        
+
                         # Append the results to the output lists
                         R_f_ep_out.append(R_f_ep.copy())
                         Yn_ep_out.append(Yn_ep.copy())
+                        R_f_ip = None
                         R_f_ip_recomp = None
                         R_f_ep_recomp_ = None
                         R_f_ep_recomp = None
+                        R_f_ep = None
+                        Yn_ip = None
                         Yn_ip_recomp = None
                         Yn_ep_recomp_ = None
                         Yn_ep_recomp = None
-    
+                        Yn_ep = None
+
                         # Finally, also extrapolate the initial radar rainfall
                         # field. This will be blended with the rainfall field(s)
                         # of the (NWP) model(s) for Lagrangian blended prob. matching
@@ -1261,17 +1283,16 @@ def forecast(
                             [t_diff_prev],
                             allow_nonfinite_values=True,
                             **extrap_kwargs_pb,
-                            )
+                        )
                         R_pm_ep.append(R_pm_ep_[0])
-    
+
                         t_prev[j] = t_sub
-    
-    
+
                 if len(R_f_ep_out) > 0:
                     R_f_ep_out = np.stack(R_f_ep_out)
                     Yn_ep_out = np.stack(Yn_ep_out)
                     R_pm_ep = np.stack(R_pm_ep)
-    
+
                 # advect the forecast field by one time step if no subtimesteps in the
                 # current interval were found
                 if not subtimesteps:
@@ -1308,8 +1329,9 @@ def forecast(
                         )
     
                     # Extrapolate the extrapolation and noise cascade
-                    extrap_kwargs_["displacement_prev"] = D[j][i]
-                    extrap_kwargs_noise["displacement_prev"] = D_Yn[j][i]
+
+                    extrap_kwargs_["displacement_prev"] = D[j]
+                    extrap_kwargs_noise["displacement_prev"] = D_Yn[j]
                     extrap_kwargs_noise["map_coordinates_mode"] = "wrap"
                     
                     _, D[j] = extrapolator(
@@ -1342,7 +1364,8 @@ def forecast(
                     t_prev[j] = t + 1
     
                 forecast_prev[j] = precip_cascade[j]
-    
+                noise_prev[j] = noise_cascade[j] 
+
                 # Blend the cascades
                 R_f_out = []
     
@@ -1559,8 +1582,9 @@ def forecast(
                         if probmatching_method == "cdf":
                             # adjust the CDF of the forecast to match the most recent
                             # benchmark rainfall field (R_pm_blended)
-                            R_f_new = probmatching.nonparam_match_empirical_cdf(
-                                R_f_new, R_pm_blended
+                            if np.any(np.isfinite(R_f_new)):
+                                R_f_new = probmatching.nonparam_match_empirical_cdf(
+                                    R_f_new, R_pm_blended
                                 )
                         elif probmatching_method == "mean":
                             # Use R_pm_blended as benchmark field and
