@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ "ubuntu-latest", "macos-latest", "windows-latest" ]
-        python-version: ["3.8", "3.10"]
+        python-version: ["3.9", "3.11"]
       max-parallel: 6
 
     defaults:
@@ -38,6 +38,7 @@ jobs:
         with:
           environment-file: ci/ci_test_env.yml
           environment-name: test_environment
+          generate-run-shell: false
           create-args: python=${{ matrix.python-version }}
 
       - name: Install pygrib (not win)
