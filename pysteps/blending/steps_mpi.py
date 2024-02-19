@@ -680,6 +680,7 @@ def forecast(
             else:
                 precip_noise_input = precip.copy()
 
+            np.random.seed(seed)
             pp, generate_noise, noise_std_coeffs = _init_noise(
                 precip_noise_input,
                 precip_thr,
@@ -692,6 +693,7 @@ def forecast(
                 noise_stddev_adj,
                 measure_time,
                 num_workers,
+                seed
             )
             precip_noise_input = None
             
