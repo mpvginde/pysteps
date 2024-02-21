@@ -1802,8 +1802,8 @@ def _send_receive_nwp(r_nwp,v_nwp,timestep,comm,timesteps=None,root=0):
             v_out_ = []
         for t in range(timesteps+1):
             if has_nwp:
-                r_nwp_t = r_nwp[:,timestep]
-                v_nwp_t = v_nwp[:,timestep,:,:,:]
+                r_nwp_t = r_nwp[:,t]
+                v_nwp_t = v_nwp[:,t,:,:,:]
             else:
                 r_nwp_t = None
                 v_nwp_t = None
